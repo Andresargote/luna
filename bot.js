@@ -10,6 +10,7 @@ bot.catch((err, ctx) => {
   console.log(`Ooops, encountered an error for ${ctx.updateType}`, err);
   const isConflictError = err.code === 409;
   if (isConflictError) {
+    console.log('Conflict error');
     setTimeout(() => {
       ctx.telegram.handleUpdate(ctx.update);
     }, 1000);
@@ -156,6 +157,8 @@ bot.action('confirmCancel', async (ctx) => {
     ctx.reply(
       'Presupuesto cancelado. Por favor, ingresa el nombre para el nuevo presupuesto:'
     );
+
+    state = 'creatingBudget';
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
@@ -307,7 +310,6 @@ bot.on('message', async (ctx) => {
       }
     }
   } catch (error) {
-    console.log(error);
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
 });

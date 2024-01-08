@@ -6,6 +6,16 @@ const uuid = require('uuid');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+bot.catch((err, ctx) => {
+  console.log(`Ooops, encountered an error for ${ctx.updateType}`, err);
+  const isConflictError = err.code === 409;
+  if (isConflictError) {
+    setTimeout(() => {
+      ctx.telegram.handleUpdate(ctx.update);
+    }, 1000);
+  }
+});
+
 mongoose
   .connect(process.env.MONGO_DB_URL, {})
   .then(() => console.log('MongoDB connected...'))

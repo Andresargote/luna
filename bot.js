@@ -240,7 +240,7 @@ bot.on('message', async (ctx) => {
         return ctx.reply('Por favor, ingresa la cantidad para el nuevo presupuesto:');
       }
 
-      const amount = parseFloat(message);
+      const amount = parseFloat(message.replace(',', '.'));
 
       if (isNaN(amount) || amount <= 0) {
         return ctx.reply('Por favor, ingresa un número válido mayor a cero.');
@@ -268,7 +268,7 @@ bot.on('message', async (ctx) => {
 
     if (state === 'registeringExpense') {
       if (newExpense.amount === undefined) {
-        const amount = parseFloat(ctx.message.text);
+        const amount = parseFloat(ctx.message.text.replace(',', '.'));
 
         if (isNaN(amount) || amount <= 0) {
           return ctx.reply('Por favor, ingresa un número válido mayor a cero.');

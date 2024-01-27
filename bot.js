@@ -32,18 +32,19 @@ bot.help((ctx) => {
   message += '/start - Inicia el bot y muestra el menú principal.\n';
   message += '/menu - Muestra el menú principal.\n';
   message += '/help - Muestra esta lista de comandos disponibles.\n';
-  ctx.reply(message);
+  ctx.reply('Aquí tienes una lista de los comandos que puedes usar:', message);
 });
 
 // Menu command
 bot.command('menu', (ctx) => {
   const buttons = Markup.inlineKeyboard([
     Markup.button.callback('💰 Crear presupuesto', 'createBudget'),
-    Markup.button.callback('💲 Solicitar presupuesto', 'currentBudget'),
+    Markup.button.callback('💲 Ver presupuesto activo', 'currentBudget'),
     Markup.button.callback('💸 Registrar gasto', 'registerExpense'),
     Markup.button.callback('📊 Ver gastos', 'expenseReport'),
   ]);
-  ctx.reply('Aquí está el menú principal:', buttons);
+
+  ctx.reply('Selecciona una opción del menú principal:', buttons);
 });
 
 // Current budget action
@@ -57,7 +58,7 @@ bot.action('currentBudget', async (ctx) => {
     });
 
     if (!activeBudget) {
-      return ctx.reply('No tienes presupuestos activos.');
+      return ctx.reply('Actualmente no tienes ningún presupuesto activo.');
     }
 
     const createdAtFormatted = activeBudget.createdAt.toLocaleDateString('es-ES', {
@@ -67,16 +68,23 @@ bot.action('currentBudget', async (ctx) => {
       day: 'numeric',
     });
 
-    if (ctx.chat.type == 'private') {
-      return ctx.reply(
-        `El presupuesto ${activeBudget.name} con la cantidad de ${activeBudget.amount}€ creada el ${createdAtFormatted} se encuentra activo y la cantidad actual es de ${activeBudget.currentAmount}€.`
-      );
+    let message = '';
+    message += `📅 Fecha de inicio: ${createdAtFormatted}\n`;
+    message += `💰 Monto inicial: ${activeBudget.amount}€\n`;
+    message += `💸 Monto actual: ${activeBudget.currentAmount}€\n`;
+
+    if (activeBudget.currentAmount < 0) {
+      message += `⚠️ Has excedido tu presupuesto por ${Math.abs(
+        activeBudget.currentAmount
+      )}€\n`;
+      message += `🤑 Tu gasto total es de ${
+        activeBudget.amount + Math.abs(activeBudget.currentAmount)
+      }€\n`;
     }
 
     if (ctx.chat.type == 'group') {
-      return ctx.reply(
-        `El presupuesto ${activeBudget.name} con la cantidad de ${activeBudget.amount}€ creada el ${createdAtFormatted} por ${activeBudget.userName} se encuentra activo y la cantidad actual es de ${activeBudget.currentAmount}€.`
-      );
+      message += `👤 Usuario: ${activeBudget.userName}\n`;
+      return ctx.reply('Aquí tienes el presupuesto actual:', message);
     }
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
@@ -93,14 +101,14 @@ bot.start((ctx) => {
 
   if (ctx.chat.type == 'private') {
     message =
-      'Hola, soy 🌙Luna, tu asistente bot para la gestión de presupuestos y gastos. A continuación, encontrarás un menú con todas las opciones disponibles para ayudarte a manejar tus finanzas de manera eficiente.';
+      'Hola, soy 🌙Luna, tu asistente bot para la gestión de presupuestos y gastos. Aquí tienes un menú con todas las opciones disponibles para ayudarte a manejar tus finanzas de manera eficiente.';
   }
 
   if (ctx.chat.type == 'group') {
-    message = `Hola, miembros del grupo ${ctx.chat.title}, soy 🌙Luna, tu asistente bot para la gestión de presupuestos y gastos. A continuación, te presento un menú con todas las opciones disponibles que te ayudarán a administrar tus finanzas de manera eficiente.`;
+    message = `Hola, miembros del grupo ${ctx.chat.title}, soy 🌙Luna, tu asistente bot para la gestión de presupuestos y gastos. Aquí tienes un menú con todas las opciones disponibles para ayudarte a manejar tus finanzas de manera eficiente.`;
   }
 
-  return ctx.reply(message, buttons);
+  return ctx.reply('¡Bienvenido! ' + message, buttons);
 });
 
 // Create budget action
@@ -135,7 +143,7 @@ bot.action('createBudget', async (ctx) => {
       );
     }
 
-    ctx.reply('Por favor, ingresa el nombre para el nuevo presupuesto:');
+    ctx.reply('Por favor, proporciona un nombre para tu nuevo presupuesto:');
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
@@ -155,7 +163,7 @@ bot.action('confirmCancel', async (ctx) => {
     newBudget = {};
 
     ctx.reply(
-      'Presupuesto cancelado. Por favor, ingresa el nombre para el nuevo presupuesto:'
+      'Has cancelado tu presupuesto actual. Ahora, por favor, proporciona un nombre para tu nuevo presupuesto:'
     );
 
     state = 'creatingBudget';
@@ -166,7 +174,7 @@ bot.action('confirmCancel', async (ctx) => {
 
 // Deny cancel action
 bot.action('denyCancel', (ctx) => {
-  ctx.reply('Operación cancelada.');
+  ctx.reply('Has decidido no cancelar tu presupuesto actual.');
 });
 
 // Register expense action
@@ -184,7 +192,7 @@ bot.action('registerExpense', async (ctx) => {
       return ctx.reply('No tienes presupuestos activos.');
     }
 
-    ctx.reply('Por favor, ingresa la cantidad del gasto:');
+    ctx.reply('Por favor, proporciona la cantidad de tu nuevo gasto:');
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
@@ -205,12 +213,14 @@ bot.action('expenseReport', async (ctx) => {
     }
 
     if (activeBudget.expenses.length === 0) {
-      return ctx.reply('No tienes gastos registrados.');
+      return ctx.reply('No has registrado ningún gasto hasta ahora.');
     }
 
     let message = '';
+    let totalExpenses = 0;
 
     activeBudget.expenses.forEach((expense) => {
+      totalExpenses += expense.amount;
       const dateFormatted = expense.date.toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
@@ -218,10 +228,16 @@ bot.action('expenseReport', async (ctx) => {
         day: 'numeric',
       });
 
-      message += `🗓 ${dateFormatted} - 💸 ${expense.amount}€ - 📝 ${expense.description} - ${expense.userName} \n`;
+      message += `🗓 ${dateFormatted}\n`;
+      message += `💸 Monto: ${expense.amount}€\n`;
+      message += `📝 Descripción: ${expense.description}\n`;
+      message += `👤 Usuario: ${expense.userName}\n`;
+      message += `------------------------\n`;
     });
 
-    ctx.reply(message);
+    message += `💰 Total de gastado: ${totalExpenses}€`;
+
+    ctx.reply('Aquí tienes un informe de tus gastos:', message);
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
@@ -237,7 +253,7 @@ bot.on('message', async (ctx) => {
 
       if (!newBudget.name) {
         newBudget.name = message;
-        return ctx.reply('Por favor, ingresa la cantidad para el nuevo presupuesto:');
+        return ctx.reply('Por favor, proporciona la cantidad para tu nuevo presupuesto:');
       }
 
       const amount = parseFloat(message.replace(',', '.'));
@@ -275,7 +291,7 @@ bot.on('message', async (ctx) => {
         }
 
         newExpense.amount = amount;
-        return ctx.reply('Por favor, ingresa una descripción para el gasto:');
+        return ctx.reply('Por favor, proporciona una descripción para tu gasto:');
       }
 
       if (!newExpense.description) {
@@ -299,9 +315,27 @@ bot.on('message', async (ctx) => {
 
         await activeBudget.save();
 
-        ctx.reply(
-          `Has registrado un gasto de ${newExpense.amount}€ en ${newExpense.description}. Tu monto disponible del presupuesto es ${activeBudget.currentAmount}€.`
-        );
+        let message = '';
+        message += '📝 Has registrado un nuevo gasto:\n';
+        message += `🗓 Fecha: ${new Date().toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}\n`;
+        message += `💸 Monto: ${newExpense.amount}€\n`;
+        message += `📝 Descripción: ${newExpense.description}\n`;
+        message += `------------------------\n`;
+
+        if (activeBudget.currentAmount > 0 || activeBudget.currentAmount === 0) {
+          message += `💰 Tu monto disponible del presupuesto es ${activeBudget.currentAmount}€`;
+        } else {
+          message += `⚠️ Has superado el monto disponible del presupuesto, te excediste por ${Math.abs(
+            activeBudget.currentAmount
+          )}€`;
+        }
+
+        ctx.reply(message);
 
         newExpense = {};
         state = '';

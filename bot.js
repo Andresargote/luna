@@ -84,8 +84,10 @@ bot.action('currentBudget', async (ctx) => {
 
     if (ctx.chat.type == 'group') {
       message += `👤 Usuario: ${activeBudget.userName}\n`;
-      return ctx.reply('Aquí tienes el presupuesto actual:', message);
+      return ctx.reply(`Aquí tienes el presupuesto actual: \n\n${message}`);
     }
+
+    ctx.reply(`Aquí tienes tu presupuesto actual: \n\n${message}`);
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
@@ -237,7 +239,7 @@ bot.action('expenseReport', async (ctx) => {
 
     message += `💰 Total de gastado: ${totalExpenses}€`;
 
-    ctx.reply('Aquí tienes un informe de tus gastos:', message);
+    ctx.reply(`Aquí tienes un informe de tus gastos: \n\n${message}`);
   } catch (error) {
     ctx.reply('Ha ocurrido un error al procesar tu solicitud.');
   }
